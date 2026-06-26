@@ -62,3 +62,14 @@ def test_artifacts_roundtrip(separable_csv, tmp_path):
     assert len(names) == 78
     with open(out / "logreg.pkl", "rb") as f:
         pickle.load(f)  # unpickles without error
+
+
+def test_artifacts_accepts_str_path(separable_csv, tmp_path):
+    """save_artifacts must tolerate a string out_dir, not only a Path."""
+    ds = build_dataset(separable_csv, target_label="DoS Hulk", seed=0)
+    tb = train_baseline(ds, seed=0)
+    out = str(tmp_path / "artifacts_str")     # pass a plain string, not a Path
+    save_artifacts(tb, out_dir=out)
+    from pathlib import Path
+    assert (Path(out) / "scaler.pkl").exists()
+    assert (Path(out) / "logreg.pkl").exists()

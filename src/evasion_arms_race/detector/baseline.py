@@ -139,6 +139,7 @@ def train_baseline(ds: Dataset, seed: int = 0, top_k: int = 15) -> TrainedBaseli
 
 def save_artifacts(tb: TrainedBaseline, out_dir: Path = ARTIFACT_DIR) -> None:
     """Persist scaler + models + reports so the attack can reuse them."""
+    out_dir = Path(out_dir)          # tolerate str paths from CLIs / callers
     out_dir.mkdir(parents=True, exist_ok=True)
     with open(out_dir / "scaler.pkl", "wb") as f:
         pickle.dump(tb.scaler, f)
