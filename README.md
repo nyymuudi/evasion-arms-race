@@ -32,7 +32,7 @@ The feature partition is **rule-based and header-driven**: it classifies each co
 ```
 evasion-arms-race/
 ├── src/evasion_arms_race/
-│   ├── data/            # dataset loading, header normalisation, temporal split
+│   ├── data/            # dataset loading, header normalisation, stratified split
 │   │   └── loader.py
 │   ├── features/        # the heart of Layer A — feature control model
 │   │   ├── partition.py        # control classes + bounds + derived recompute rules
@@ -66,7 +66,7 @@ The project is built in three layers of increasing ambition.
 - [x] (2) Feature partition into control classes — generalised to a header-driven rule classifier
 - [x] (3) Feasibility projection — validated, idempotent, source-agnostic
 - [x] (4) Functional-core preservation — built into the projection (DoS floor)
-- [ ] (5) Black-box search algorithm calling the projection each step
+- [x] (5) Black-box search algorithm calling the projection each step — projected, decision-based boundary attack
 - [ ] (6) Metrics module: success rate, controllable-only perturbation size, query count
 - [ ] (7) pcap-level realisability validation (resolves the unreconstructable aggregates)
 
@@ -86,10 +86,14 @@ pytest -q          # the feasibility pipeline should pass out of the box
 
 ## Current status
 
-Layer A items 1–4 complete and tested. The feasibility pipeline reproduces a hand-built feature partition exactly via the rule classifier, enforces frozen/constrained/derived constraints, preserves the DoS functional core, and is idempotent. Five CICFlowMeter aggregate features (packet-length statistics) are flagged *unreconstructable* from CSV aggregates alone and are deferred to the pcap-level validation in item 7; LYCOS's richer feature set may permit exact recomputation.
+Layer A items 1–5 complete and tested. The feasibility pipeline reproduces a hand-built feature partition exactly via the rule classifier, enforces frozen/constrained/derived constraints, preserves the DoS functional core, and is idempotent. The black-box attack (item 5) is a projected, decision-based **boundary attack** with random-restart initialisation: it calls the feasibility projection on every candidate, so each queried point stays realisable as traffic, and runs identically against both baseline detectors. The search space is the controllable + constrained features only; perturbation magnitude is reported over controllable features in the detector's scaled space.
+
+Headline finding (15 DoS-Hulk samples, 1200-query budget): **both detectors are evaded at 100% success**. The contrast is cost, not success — logistic regression falls in ~200 median queries (L2 ≈ 2.8 over controllable features, scaled), the Random Forest in ~300 (L2 ≈ 4.1). The earlier ablation-based expectation that the Random Forest would *resist* did not survive contact with the attack: classification robustness (PR-AUC under feature ablation) is not adversarial robustness under a feasibility-constrained search. Whether the Random Forest evasions correspond to **physically realisable** flows — rather than exploiting the forest's arbitrary extrapolation outside its training support — is exactly what the pcap-level realisability check (item 7) must settle. The attack also separates *evasion failed because the detector is strong* from *evasion failed because the feasibility projection blocked it* (e.g. the DoS rate floor), via an instrumented diagnostic query.
+
+Five CICFlowMeter aggregate features (packet-length statistics) are flagged *unreconstructable* from CSV aggregates alone and are deferred to the pcap-level validation in item 7; LYCOS's richer feature set may permit exact recomputation.
 
 ## Notes on integrity
 
-- Honest evaluation only: PR-AUC over accuracy, temporal train/test split so concept drift is visible.
+- Honest evaluation only: PR-AUC over accuracy. The current split is stratified random; a temporal split (to make concept drift visible) requires the timestamped GeneratedLabelledFlows distribution and is deferred, not silently assumed.
 - The feasibility constraint is the project's reason to exist; relaxing it to chase higher evasion rates would make the results meaningless.
 - Known CIC-IDS2017 data-quality issues are handled by preferring the corrected LYCOS-IDS2017 extraction.
