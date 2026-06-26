@@ -1,0 +1,535 @@
+{
+  "config": {
+    "n_samples": 25,
+    "n_refs": 8,
+    "budget": 1200,
+    "seed": 0,
+    "data": "data/raw/cicids2017/MachineLearningCVE/Wednesday-workingHours.pcap_ISCX.csv"
+  },
+  "models": {
+    "logreg": {
+      "overall_success_rate": 1.0,
+      "median_l2_controllable_success": 6.539527971801833,
+      "median_feasible_queries": 68.0,
+      "perturbation_curve": {
+        "eps": [
+          0.0,
+          0.7159431705146012,
+          1.4318863410292024,
+          2.1478295115438035,
+          2.863772682058405,
+          3.579715852573006,
+          4.295659023087607,
+          5.011602193602209,
+          5.72754536411681,
+          6.443488534631411,
+          7.159431705146012,
+          7.875374875660613,
+          8.591318046175214,
+          9.307261216689815,
+          10.023204387204418,
+          10.739147557719019,
+          11.45509072823362,
+          12.17103389874822,
+          12.886977069262821,
+          13.602920239777424,
+          14.318863410292025,
+          15.034806580806626,
+          15.750749751321226,
+          16.46669292183583,
+          17.182636092350428
+        ],
+        "success_rate": [
+          0.0,
+          0.44,
+          0.48,
+          0.48,
+          0.48,
+          0.48,
+          0.48,
+          0.48,
+          0.48,
+          0.48,
+          0.64,
+          0.72,
+          0.96,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "budget_curve": {
+        "budget": [
+          1,
+          31,
+          62,
+          93,
+          123,
+          154,
+          185,
+          216,
+          246,
+          277,
+          308,
+          339,
+          369,
+          400,
+          431,
+          462,
+          492,
+          523,
+          554,
+          585,
+          615,
+          646,
+          677,
+          708,
+          738,
+          769,
+          800,
+          831,
+          861,
+          892,
+          923,
+          954,
+          984,
+          1015,
+          1046,
+          1077,
+          1107,
+          1138,
+          1169,
+          1200
+        ],
+        "success_rate": [
+          0.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "decomposition_at_budget": {
+        "1": {
+          "success": 0,
+          "feasibility_bound": 0,
+          "detector_bound": 25
+        },
+        "24": {
+          "success": 25,
+          "feasibility_bound": 0,
+          "detector_bound": 0
+        },
+        "60": {
+          "success": 25,
+          "feasibility_bound": 0,
+          "detector_bound": 0
+        },
+        "120": {
+          "success": 25,
+          "feasibility_bound": 0,
+          "detector_bound": 0
+        },
+        "300": {
+          "success": 25,
+          "feasibility_bound": 0,
+          "detector_bound": 0
+        },
+        "600": {
+          "success": 25,
+          "feasibility_bound": 0,
+          "detector_bound": 0
+        },
+        "1200": {
+          "success": 25,
+          "feasibility_bound": 0,
+          "detector_bound": 0
+        }
+      },
+      "floor_binding": {
+        "flip_attempts": 387,
+        "floor_blocked": 237,
+        "block_rate": 0.6124031007751938,
+        "top_reverting_features": {
+          "Idle Mean": 85,
+          "Subflow Fwd Packets": 83,
+          "Fwd Packets/s": 71,
+          "Fwd Packet Length Mean": 56,
+          "Active Min": 52,
+          "Fwd URG Flags": 52,
+          "Fwd Avg Packets/Bulk": 52,
+          "Flow IAT Max": 52
+        }
+      },
+      "feature_movement_top10": [
+        [
+          "Fwd IAT Std",
+          1.293439338932927
+        ],
+        [
+          "Idle Min",
+          1.2572202279551328
+        ],
+        [
+          "Idle Mean",
+          1.2556060290444901
+        ],
+        [
+          "Flow IAT Max",
+          1.2482401360762454
+        ],
+        [
+          "Fwd IAT Max",
+          1.2469627619797
+        ],
+        [
+          "Idle Max",
+          1.244172256307083
+        ],
+        [
+          "Flow IAT Std",
+          1.2368096754745084
+        ],
+        [
+          "Flow Duration",
+          1.1267801613373327
+        ],
+        [
+          "Fwd IAT Total",
+          1.1256461061281875
+        ],
+        [
+          "Flow IAT Mean",
+          1.0311274924618263
+        ]
+      ],
+      "attack_vs_detector_top10_overlap": {
+        "k": 10,
+        "shared": [
+          "Flow Duration",
+          "Fwd IAT Total"
+        ],
+        "n_shared": 2,
+        "jaccard": 0.1111111111111111
+      },
+      "detector_top_movable": [
+        "Fwd Packet Length Max",
+        "Fwd Packet Length Min",
+        "Fwd IAT Min",
+        "Fwd IAT Total",
+        "Flow Duration"
+      ],
+      "detector_top_unmovable": [
+        "Min Packet Length",
+        "Destination Port",
+        "Flow Bytes/s",
+        "Packet Length Variance",
+        "Bwd IAT Total"
+      ]
+    },
+    "rf": {
+      "overall_success_rate": 1.0,
+      "median_l2_controllable_success": 6.0443445402033475,
+      "median_feasible_queries": 333.0,
+      "perturbation_curve": {
+        "eps": [
+          0.0,
+          0.7159431705146012,
+          1.4318863410292024,
+          2.1478295115438035,
+          2.863772682058405,
+          3.579715852573006,
+          4.295659023087607,
+          5.011602193602209,
+          5.72754536411681,
+          6.443488534631411,
+          7.159431705146012,
+          7.875374875660613,
+          8.591318046175214,
+          9.307261216689815,
+          10.023204387204418,
+          10.739147557719019,
+          11.45509072823362,
+          12.17103389874822,
+          12.886977069262821,
+          13.602920239777424,
+          14.318863410292025,
+          15.034806580806626,
+          15.750749751321226,
+          16.46669292183583,
+          17.182636092350428
+        ],
+        "success_rate": [
+          0.0,
+          0.44,
+          0.44,
+          0.44,
+          0.44,
+          0.44,
+          0.44,
+          0.48,
+          0.48,
+          0.56,
+          0.6,
+          0.68,
+          0.72,
+          0.72,
+          0.8,
+          0.8,
+          0.88,
+          0.88,
+          0.92,
+          0.92,
+          0.96,
+          0.96,
+          0.96,
+          0.96,
+          1.0
+        ]
+      },
+      "budget_curve": {
+        "budget": [
+          1,
+          31,
+          62,
+          93,
+          123,
+          154,
+          185,
+          216,
+          246,
+          277,
+          308,
+          339,
+          369,
+          400,
+          431,
+          462,
+          492,
+          523,
+          554,
+          585,
+          615,
+          646,
+          677,
+          708,
+          738,
+          769,
+          800,
+          831,
+          861,
+          892,
+          923,
+          954,
+          984,
+          1015,
+          1046,
+          1077,
+          1107,
+          1138,
+          1169,
+          1200
+        ],
+        "success_rate": [
+          0.0,
+          0.48,
+          0.56,
+          0.68,
+          0.76,
+          0.8,
+          0.8,
+          0.8,
+          0.8,
+          0.84,
+          0.84,
+          0.84,
+          0.84,
+          0.84,
+          0.84,
+          0.84,
+          0.84,
+          0.84,
+          0.84,
+          0.88,
+          0.92,
+          0.92,
+          0.96,
+          0.96,
+          0.96,
+          0.96,
+          0.96,
+          0.96,
+          0.96,
+          0.96,
+          0.96,
+          0.96,
+          0.96,
+          0.96,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0,
+          1.0
+        ]
+      },
+      "decomposition_at_budget": {
+        "1": {
+          "success": 0,
+          "feasibility_bound": 0,
+          "detector_bound": 25
+        },
+        "24": {
+          "success": 11,
+          "feasibility_bound": 0,
+          "detector_bound": 14
+        },
+        "60": {
+          "success": 14,
+          "feasibility_bound": 0,
+          "detector_bound": 11
+        },
+        "120": {
+          "success": 19,
+          "feasibility_bound": 0,
+          "detector_bound": 6
+        },
+        "300": {
+          "success": 21,
+          "feasibility_bound": 0,
+          "detector_bound": 4
+        },
+        "600": {
+          "success": 22,
+          "feasibility_bound": 0,
+          "detector_bound": 3
+        },
+        "1200": {
+          "success": 25,
+          "feasibility_bound": 0,
+          "detector_bound": 0
+        }
+      },
+      "floor_binding": {
+        "flip_attempts": 497,
+        "floor_blocked": 69,
+        "block_rate": 0.13883299798792756,
+        "top_reverting_features": {
+          "Subflow Fwd Bytes": 13,
+          "Total Fwd Packets": 12,
+          "Subflow Fwd Packets": 8,
+          "Fwd IAT Std": 6,
+          "Active Max": 6,
+          "Fwd Avg Bulk Rate": 6,
+          "Fwd Packet Length Min": 6,
+          "Active Min": 6
+        }
+      },
+      "feature_movement_top10": [
+        [
+          "Total Fwd Packets",
+          1.6733574825351014
+        ],
+        [
+          "Flow IAT Mean",
+          1.1819857013220947
+        ],
+        [
+          "Init_Win_bytes_forward",
+          1.1715336620589551
+        ],
+        [
+          "Active Max",
+          1.166854016573796
+        ],
+        [
+          "Fwd IAT Max",
+          1.0125990777122196
+        ],
+        [
+          "Fwd Packet Length Std",
+          0.8837422791688221
+        ],
+        [
+          "Fwd IAT Total",
+          0.874188073955595
+        ],
+        [
+          "min_seg_size_forward",
+          0.8734101906283044
+        ],
+        [
+          "Idle Mean",
+          0.8709304591537772
+        ],
+        [
+          "Fwd Packets/s",
+          0.86308711505804
+        ]
+      ],
+      "attack_vs_detector_top10_overlap": {
+        "k": 10,
+        "shared": [],
+        "n_shared": 0,
+        "jaccard": 0.0
+      },
+      "detector_top_movable": [],
+      "detector_top_unmovable": [
+        "Bwd Packet Length Std",
+        "Bwd Packet Length Mean",
+        "Max Packet Length",
+        "Packet Length Mean",
+        "Packet Length Variance",
+        "Avg Bwd Segment Size",
+        "Average Packet Size",
+        "Bwd Packet Length Max",
+        "Destination Port",
+        "Packet Length Std"
+      ]
+    }
+  }
+}

@@ -173,6 +173,10 @@ class AttackResult:
     flips_survived: int               # ... still benign AFTER projection
     floor_blocked: int                # benign before, reverted to attack after
     blocking_features: dict[str, int] # which clamped/frozen features did the reverting
+    # Traces so a single run reconstructs success-vs-budget and the three-class
+    # decomposition at any budget B <= query_budget (item 6), without re-running:
+    queries_to_first_evasion: int | None = None    # feasible-query count at first benign seed
+    queries_to_first_floor_block: int | None = None  # ... at first floor-reverted flip
     best_vector: dict[str, float] = field(default_factory=dict)
 
 
@@ -219,8 +223,10 @@ def attack_sample(
     clean_scaled = oracle.scale(clean_vec)
 
     # Bookkeeping for floor attribution.
-    stats = {"flip_attempts": 0, "flips_survived": 0, "floor_blocked": 0}
+    stats = {"flip_attempts": 0, "flips_survived": 0, "floor_blocked": 0,
+             "first_floor_block_q": None}
     blocking: Counter = Counter()
+    first_evasion_q: int | None = None
 
     def feasible_eval(cand_scaled: np.ndarray):
         """Project a scaled candidate, query the detector on the PROJECTED point.
@@ -242,6 +248,8 @@ def attack_sample(
                     stats["flips_survived"] += 1
                 else:                                 # projection reverted the flip
                     stats["floor_blocked"] += 1
+                    if stats["first_floor_block_q"] is None:
+                        stats["first_floor_block_q"] = oracle.feasible_queries
                     for f in projres.clamped:
                         blocking[f] += 1
         return dec_proj, proj_scaled, projres
@@ -256,7 +264,8 @@ def attack_sample(
     if dec_clean == 0:
         return _result(oracle, "", clean_scaled, clean_proj_scaled, ctrl_idx,
                        pert_idx, success=True, mode="already_benign",
-                       init_found=True, stats=stats, blocking=blocking, names=names)
+                       init_found=True, stats=stats, blocking=blocking, names=names,
+                       first_evasion=oracle.feasible_queries)
 
     # ---- 1. Initialisation: blend toward benign references until one evades -- #
     adv_scaled = None
@@ -275,6 +284,7 @@ def attack_sample(
             dec, proj_scaled, _ = feasible_eval(cand)
             if dec == 0:
                 adv_scaled = proj_scaled
+                first_evasion_q = oracle.feasible_queries
                 break
         if adv_scaled is not None:
             break
@@ -294,6 +304,7 @@ def attack_sample(
             dec, proj_scaled, _ = feasible_eval(cand)
             if dec == 0:
                 adv_scaled = proj_scaled
+                first_evasion_q = oracle.feasible_queries
                 break
 
     if adv_scaled is None:
@@ -359,7 +370,8 @@ def attack_sample(
 
     return _result(oracle, "", clean_scaled, best_scaled, ctrl_idx, pert_idx,
                    success=True, mode="success", init_found=True,
-                   stats=stats, blocking=blocking, names=names)
+                   stats=stats, blocking=blocking, names=names,
+                   first_evasion=first_evasion_q)
 
 
 def _classify_failure(stats: dict[str, int]) -> str:
@@ -371,7 +383,8 @@ def _classify_failure(stats: dict[str, int]) -> str:
 
 
 def _result(oracle, model_name, clean_scaled, best_scaled, ctrl_idx, pert_idx,
-            *, success, mode, init_found, stats, blocking, names) -> AttackResult:
+            *, success, mode, init_found, stats, blocking, names,
+            first_evasion=None) -> AttackResult:
     dctrl = best_scaled[ctrl_idx] - clean_scaled[ctrl_idx]
     dpert = best_scaled[pert_idx] - clean_scaled[pert_idx]
     best_vec = {names[i]: float(best_scaled_i)
@@ -390,6 +403,8 @@ def _result(oracle, model_name, clean_scaled, best_scaled, ctrl_idx, pert_idx,
         flips_survived=stats["flips_survived"],
         floor_blocked=stats["floor_blocked"],
         blocking_features=dict(blocking.most_common()),
+        queries_to_first_evasion=first_evasion,
+        queries_to_first_floor_block=stats["first_floor_block_q"],
         best_vector=best_vec if success else {},
     )
 
