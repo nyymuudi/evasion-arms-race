@@ -1,0 +1,96 @@
+{
+  "config": {
+    "clean_train_size": 30000,
+    "rounds": 4,
+    "n_attack": 30,
+    "budget": 800,
+    "replication": 5,
+    "seed": 0
+  },
+  "records": {
+    "logreg": [
+      {
+        "round": 0,
+        "pr_auc": 0.999306809032665,
+        "hulk_recall": 0.9981575150788271,
+        "feature_success_rate": 1.0,
+        "realisable_rate": 0.43333333333333335,
+        "median_l2_controllable": 7.135410117001376,
+        "n_realisable_evasions": 13,
+        "n_adversarial_train": 0
+      },
+      {
+        "round": 1,
+        "pr_auc": 0.9987718005123322,
+        "hulk_recall": 0.9981748970120456,
+        "feature_success_rate": 1.0,
+        "realisable_rate": 0.03333333333333333,
+        "median_l2_controllable": 3.659303156531549,
+        "n_realisable_evasions": 1,
+        "n_adversarial_train": 150
+      },
+      {
+        "round": 2,
+        "pr_auc": 0.9987974204075225,
+        "hulk_recall": 0.9981575150788271,
+        "feature_success_rate": 1.0,
+        "realisable_rate": 0.0,
+        "median_l2_controllable": 3.227983123270432,
+        "n_realisable_evasions": 0,
+        "n_adversarial_train": 300
+      },
+      {
+        "round": 3,
+        "pr_auc": 0.9987459203792773,
+        "hulk_recall": 0.9981575150788271,
+        "feature_success_rate": 1.0,
+        "realisable_rate": 0.0,
+        "median_l2_controllable": 4.405666948218983,
+        "n_realisable_evasions": 0,
+        "n_adversarial_train": 450
+      }
+    ],
+    "rf": [
+      {
+        "round": 0,
+        "pr_auc": 0.9999691031019501,
+        "hulk_recall": 0.9984530079435435,
+        "feature_success_rate": 0.3,
+        "realisable_rate": 0.0,
+        "median_l2_controllable": 6.779094980201478,
+        "n_realisable_evasions": 0,
+        "n_adversarial_train": 0
+      },
+      {
+        "round": 1,
+        "pr_auc": 0.9999569063149426,
+        "hulk_recall": 0.9984530079435435,
+        "feature_success_rate": 0.3,
+        "realisable_rate": 0.0,
+        "median_l2_controllable": 0.005123411220870985,
+        "n_realisable_evasions": 0,
+        "n_adversarial_train": 45
+      },
+      {
+        "round": 2,
+        "pr_auc": 0.9999491490707134,
+        "hulk_recall": 0.9985572995428551,
+        "feature_success_rate": 0.3333333333333333,
+        "realisable_rate": 0.0,
+        "median_l2_controllable": 0.014523626213688724,
+        "n_realisable_evasions": 0,
+        "n_adversarial_train": 90
+      },
+      {
+        "round": 3,
+        "pr_auc": 0.9999635144167187,
+        "hulk_recall": 0.9985920634092924,
+        "feature_success_rate": 0.4,
+        "realisable_rate": 0.0,
+        "median_l2_controllable": 0.06001501728350455,
+        "n_realisable_evasions": 0,
+        "n_adversarial_train": 140
+      }
+    ]
+  }
+}

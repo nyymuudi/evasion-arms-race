@@ -10,8 +10,6 @@ That adversarial examples can fool ML classifiers is well established [1, 2]. Wh
 
 Most *feature-space* evasion work perturbs whatever features lower the classifier's score, including features the attacker does not control in reality (server responses, network-side aggregates); the resulting adversarial examples are often not realisable as traffic, so the reported attack-success numbers can be illusory [3, 4]. This project's central commitment is therefore a **feasibility (problem-space) constraint** [3]: every feature is partitioned by *who controls it*, and the search may move only features the attacker can actually set, while preserving the attack's functional core — a DoS flood must remain a flood [4].
 
-Feature control classes:
-
 | Class | Meaning | Perturbable? |
 |-------|---------|--------------|
 | **Controllable** | Attacker's own forward timing / sizing / padding / flags | Yes |
@@ -21,7 +19,7 @@ Feature control classes:
 
 ## Threat model
 
-Black-box: the attacker has query access to the detector's decision only, not its gradients or parameters. This is the realistic setting (the attacker rarely owns the model) and the harder one.
+Black-box throughout: the attacker has query access to the detector's decision only, not its gradients or parameters. This is the realistic setting (the attacker rarely owns the model) and the harder one.
 
 ## Method and positioning
 
@@ -29,62 +27,39 @@ The evasion search is a *decision-based* black-box attack: it queries only the d
 
 ## Dataset
 
-Primary: **LYCOS-IDS2017** [7] (the LycoSTand flow extractor over the CIC-IDS2017 [5] PCAPs), which corrects documented flow-construction and labelling errors in the original CIC-IDS2017 CSVs. Target attack class: **DoS Hulk** (HTTP flood) — chosen because timing/volume features dominate and are genuinely attacker-controlled, making the functional-preservation constraint tractable. CICFlowMeter [6] naming is supported as a fallback and is what the feature partition was first validated against.
+The implementation runs on the **CICFlowMeter CIC-IDS2017** [5, 6] CSVs (Wednesday capture; DoS Hulk vs benign). **LYCOS-IDS2017** [7] — the LycoSTand extractor over the same PCAPs, which corrects documented flow-construction and labelling errors — is the *preferred* extraction and the design target; because the feature partition is rule-based and header-driven, switching to it is a header swap rather than a code change, but it is not yet the default. **DoS Hulk** (HTTP flood) is the target class because timing/volume features dominate and are genuinely attacker-controlled, which keeps the functional-preservation constraint tractable. Features the classifier rules cannot confidently place are surfaced for human confirmation, never silently guessed.
 
-The feature partition is **rule-based and header-driven**: it classifies each column by name pattern, so swapping CICFlowMeter for LYCOS is a header swap, not a code change. Anything the rules cannot confidently classify is surfaced for human confirmation, never silently guessed.
-
-## Project layout
+## Project architecture
 
 ```
 evasion-arms-race/
 ├── src/evasion_arms_race/
 │   ├── data/            # dataset loading, header normalisation, stratified split
 │   │   └── loader.py
-│   ├── features/        # the heart of Layer A — feature control model
+│   ├── features/        # feature control model — the heart of the feasibility constraint
 │   │   ├── partition.py        # control classes + bounds + derived recompute rules
 │   │   ├── rule_classifier.py  # header-driven, feature-set-agnostic classifier
 │   │   └── projection.py       # feasibility projection (frozen/constrained/derived)
-│   ├── detector/        # baseline IDS the attack evades (PR-AUC, temporal eval)
-│   │   └── baseline.py
+│   ├── detector/        # baseline IDS, ablation diagnostics, adversarial training
+│   │   ├── baseline.py · ablation.py · robust.py
 │   ├── attack/          # black-box evasion search + realisability-constrained poisoning
-│   │   ├── blackbox.py
-│   │   └── poisoning.py
-│   ├── metrics/         # evasion success rate, perturbation size, query budget
-│   │   └── evasion.py
-│   └── validation/      # pcap-level realisability check (resolves aggregates)
+│   │   ├── blackbox.py · poisoning.py
+│   ├── metrics/         # evasion success / perturbation / query-budget reporting
+│   │   └── evasion.py · report.py
+│   └── validation/      # packet-level realisability check (resolves aggregates)
 │       └── realisability.py
-├── configs/             # experiment configs (dataset paths, target class, budgets)
-├── tests/               # pytest suite; projection pipeline is fully validated
-├── scripts/             # CLI entrypoints (download, preprocess, train, attack)
-├── notebooks/           # exploratory analysis (not part of the reproducible path)
-├── experiments/         # run outputs (gitignored)
-├── data/{raw,processed,artifacts}/   # gitignored; never commit captures
-├── docs/
-├── pyproject.toml
-└── README.md
+├── experiments/         # run harnesses (arms_race.py) + outputs; figures gitignored, JSON tracked
+├── docs/                # game_theory.md (equilibrium analysis), synthesis.md (cross-layer narrative)
+├── tests/               # pytest suite covering the pure logic of every layer
+├── data/{raw,artifacts}/   # gitignored; never commit captures
+└── pyproject.toml
 ```
 
-## Roadmap
+The work is organised as three layers of increasing ambition, unified by the feasibility constraint:
 
-The project is built in three layers of increasing ambition.
-
-**Layer A — Evasion** *(complete)*. Attacker evades a fixed detector under feasibility + functional constraints.
-- [x] (1) Threat model fixed: black-box
-- [x] (2) Feature partition into control classes — generalised to a header-driven rule classifier
-- [x] (3) Feasibility projection — validated, idempotent, source-agnostic
-- [x] (4) Functional-core preservation — built into the projection (DoS floor)
-- [x] (5) Black-box search algorithm calling the projection each step — projected, decision-based boundary attack
-- [x] (6) Metrics module: success-vs-perturbation tradeoff curve, three-class outcome decomposition, per-feature movement vs detector reliance
-- [x] (7) Packet-level realisability validation — feasibility checks + reconstruct the pooled length features + re-query the detector; scapy witness pcap
-
-**Layer B — Poisoning** *(complete)*. Attacker injects budget-limited, **realisability-projected** Hulk samples — they pass the same `project()` + packet-level feasibility check as the evasion samples and keep the DoS floor — labelled benign into the detector's retraining data [14]; evaluation is on the clean held-out test set the attacker never saw. Black-box, chosen-label injection (the more realistic auto-labelling attacker is strictly weaker: its budget is gated by the item-7 realisable-evasion rate, 52% LR / 0% RF).
-- [x] Threat model + retraining pipeline (clean train ∪ projected poison → retrain → evaluate on clean test)
-- [x] Two strategies: random label-flip vs boundary-selected poison (nearest the current boundary via black-box query)
-- [x] Poison-threshold sweep: PR-AUC and Hulk recall vs poison fraction, both strategies, both detectors
-
-**Finding.** Realistic poisoning does **not** collapse threshold-independent detection: PR-AUC is nearly flat even at a 20% poison budget (LR 0.9993 → 0.9968, RF 1.0000 → 0.9996). The strong Hulk/benign separability the ablation diagnostics found is exactly what makes the detector hard to poison in ranking terms — an honest negative result, reported as such. What *does* degrade is the **operating point**: at the deployed 0.5 threshold, Hulk recall falls to ≈0.70 (LR) / ≈0.75 (RF) at 20% label-flip poison — roughly a quarter to a third of attacks slip through — because the poison shifts predicted probabilities below threshold without destroying the ranking. Strategy nuance: boundary-selected poison is more sample-efficient at low budgets (it dents LR recall already at 5%), while random label-flip, carrying more confidently-wrong mass, does more damage at high budgets. As anticipated from Layer A, the Random Forest is the more poison-robust of the two.
-
-**Layer C — Robust defence + game-theoretic analysis**. Adversarial training, then model the attack/retrain loop explicitly as a game and study whether it converges to an equilibrium or oscillates.
+- **Layer A — Evasion** *(complete)*. A black-box, decision-based boundary attack evades a fixed detector while every candidate is confined to the feasible set (`features/projection.py`) and validated at the packet level (`validation/realisability.py`). Spans the threat model, the control-class partition + rule classifier, the feasibility projection with its DoS functional floor, the boundary search, the metrics module, and the packet-level realisability validation.
+- **Layer B — Poisoning** *(complete)*. The attacker injects budget-limited, feasibility-projected Hulk samples (labelled benign) into the detector's retraining set; evaluation is on clean held-out data (`attack/poisoning.py`). Two strategies — random label-flip and boundary-selected — swept over the poison fraction for both detectors.
+- **Layer C — Robust defence + game-theoretic framing** *(complete)*. Adversarial training (`detector/robust.py`) folds the attacker's feasibility-projected evasions back into training, labelled with their correct class; an attack/retrain loop (`experiments/arms_race.py`) is analysed **empirically**. The honest equilibrium analysis lives in `docs/game_theory.md`, the cross-layer synthesis in `docs/synthesis.md`.
 
 ## Setup
 
@@ -92,26 +67,24 @@ The project is built in three layers of increasing ambition.
 git clone https://github.com/nyymuudi/evasion-arms-race.git
 cd evasion-arms-race
 python -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev]"
-pytest -q          # the feasibility pipeline should pass out of the box
+pip install -e ".[dev]"          # add ".[dev,pcap]" for the scapy witness pcaps
+pytest -q                        # the feasibility pipeline should pass out of the box
 ```
-
-## Current status
-
-Layer A is complete (items 1–7) and tested. The feasibility pipeline reproduces a hand-built feature partition exactly via the rule classifier, enforces frozen/constrained/derived constraints, preserves the DoS functional core, and is idempotent. The black-box attack (item 5) is a projected, decision-based **boundary attack** with random-restart initialisation: it calls the feasibility projection on every candidate, so each queried point stays realisable as traffic, and runs identically against both baseline detectors. The search space is the controllable + constrained features only; perturbation magnitude is reported over controllable features in the detector's scaled space.
-
-Headline finding (DoS-Hulk samples, 1200-query budget): **both detectors are evaded at 100% success**. The contrast is cost, not success — the Random Forest needs both more queries (it climbs to 100% gradually as budget grows, while logistic regression saturates almost immediately) and, typically, a larger perturbation. The earlier ablation-based expectation that the Random Forest would *resist* did not survive contact with the attack: classification robustness (PR-AUC under feature ablation) is not adversarial robustness under a feasibility-constrained search. Whether the Random Forest evasions correspond to **physically realisable** flows — rather than exploiting the forest's arbitrary extrapolation outside its training support — is settled by the realisability check (item 7), below, and the answer reverses this picture.
-
-The metrics module (item 6, `python -m evasion_arms_race.metrics.report`) turns the per-sample results into four reportable products: (1) a **success-vs-perturbation tradeoff curve** (success rate as a function of the allowed controllable-L2, never a single number); (2) a **three-class outcome decomposition vs query budget** — success / `feasibility_bound` (the DoS floor blocked the perturbation) / `detector_bound` (the detector resists on the movable subspace); (3) **per-feature movement** of successful evasions compared against the detector's top-weighted features; (4) logistic regression vs Random Forest on every figure. Two findings worth flagging: the DoS floor rarely *terminates* an attack at these budgets, yet it reverts a large share of individual label-flips (a per-step block rate the report quantifies) — it raises cost without preventing evasion; and the detector's most-weighted features are mostly **unmovable** (backward/derived), with the Random Forest evasions moving *none* of its top-10 features — the attack exploits movable correlates, not the detector's stated signal. Figures land in `experiments/figures/` (gitignored); a small numeric summary in `experiments/evasion_metrics.json` (version-controlled).
-
-**Realisability (item 7, the cornerstone, `python -m evasion_arms_race.validation.realisability`).** A feature vector the detector calls benign is a real evasion only if it corresponds to a sendable packet stream. Each successful evasion is checked for feasibility — its forward size and inter-arrival *moments* must admit an actual packet multiset (mean/total consistency, `min ≤ mean ≤ max`, and the Bhatia–Davis variance bound [13]) — and the five pooled packet-length statistics, previously deferred as "unreconstructable", are recovered in closed form from the per-direction marginals (Min/Max exactly; Mean/Std/Variance via the law of total variance with a data-fit affine calibration, R² ≥ 0.997), after which the detector is re-queried on the corrected vector. The result reframes Layer A: **feature-space evasion (100% for both models) does not survive problem-space validation.** Of 25 successful evasions each, the realisable fraction is **52% for logistic regression and 0% for the Random Forest** — every Random-Forest evasion is statistically infeasible (the search produced flows whose moments no packet sequence can have); none were reverted by the length-feature correction, so the collapse is due to infeasibility, not the pooled features. The apparent Random-Forest vulnerability of items 5–6 was therefore an artefact of the attack roaming infeasible regions of feature space; under a realisability constraint it vanishes. Feasibility is sound but not exhaustive, so the realisable fractions are upper bounds (0% is definitive); the clear next step is to fold these moment constraints into the projection so the search only ever proposes realisable flows. A scapy [witness pcap](experiments/pcaps/) of each realisable flow is emitted (gitignored); the numeric summary is `experiments/realisability.json` (version-controlled).
 
 ## Notes on integrity
 
 - Honest evaluation only: PR-AUC over accuracy. The current split is stratified random; a temporal split (to make concept drift visible) requires the timestamped GeneratedLabelledFlows distribution and is deferred, not silently assumed.
 - The feasibility constraint is the project's reason to exist; relaxing it to chase higher evasion rates would make the results meaningless.
-- Evasion success is reported in **problem space, not just feature space**: a vector the detector misclassifies counts as an evasion only once it is shown to be realisable as traffic (item 7). This is what turns a 100% feature-space success rate into the honest 52% / 0% realisable figures.
-- Known CIC-IDS2017 data-quality issues are handled by preferring the corrected LYCOS-IDS2017 extraction.
+- Evasion success is reported in **problem space, not just feature space**: a vector the detector misclassifies counts as an evasion only once it is shown to be realisable as traffic. This is what turns a 100% feature-space success rate into the honest 52% / 0% realisable figures.
+- Terminology is kept conservative: empirical dynamics are not called equilibria, and a near-perfect PR-AUC is treated as a prompt to investigate (ablation, realisability), not a trophy.
+
+## Findings
+
+**Layer A — evasion is bounded by realisability.** The boundary attack evades both detectors at **100% in feature space**, but packet-level validation shows only **52% (logistic regression) and 0% (Random Forest)** of those evasions are realisable as traffic — every Random-Forest evasion is statistically infeasible (moments, e.g. variance beyond the Bhatia–Davis bound [13] or `IAT max > duration`, that no packet stream can produce). The apparent Random-Forest vulnerability is thus an artefact of an over-powered attacker roaming infeasible feature space; under realisability it vanishes. Supporting detail: the DoS floor *raises* evasion cost — it reverts a large fraction of individual label-flips — without *terminating* it; the detectors' most-weighted features are mostly unmovable (backward/derived), and the Random-Forest attack moves *none* of its top-10 features, exploiting movable correlates rather than the detector's stated signal. The five packet-length aggregates once deferred as "unreconstructable" were recovered in closed form (Min/Max exactly; Mean/Std/Variance via the law of total variance with a data-fit calibration, R² ≥ 0.997). *Reproduce:* `python -m evasion_arms_race.metrics.report`, `python -m evasion_arms_race.validation.realisability`.
+
+**Layer B — poisoning is bounded by separability.** Poison injected into the detector's retraining data [14] barely dents threshold-independent detection: clean-test PR-AUC stays nearly flat to a 20% poison budget (LR 0.9993 → 0.9968, RF 1.0000 → 0.9996), because the Hulk/benign separability the ablation diagnostics found resists poisoning of the *ranking*. What degrades is the **operating point** — at the deployed 0.5 threshold, Hulk recall falls to ≈0.70 (LR) / ≈0.75 (RF) at 20% label-flip poison, as the poison pushes predicted probabilities under threshold without destroying the ranking. Boundary-selected poison is more sample-efficient at low budgets; mass label-flip more damaging at high; the Random Forest is the more poison-robust. The realistic auto-labelling attacker is strictly weaker — its budget is gated by Layer A's realisable rate (52% LR / 0% RF). An honest negative-leaning result, reported as such. *Reproduce:* `python -m evasion_arms_race.attack.poisoning`.
+
+**Layer C — the arms race converges, on the realisability axis.** Adversarial training folds the attacker's feasibility-projected evasions back into the training set (labelled with their *correct* class) and the loop re-attacks *fresh* Hulk samples each round. Read through the **realisable**-evasion rate — the metric that matters — the logistic-regression arms race **converges within ≈2 rounds**: the realisable evasion rate falls **43% → 3% → 0% → 0%**, at a negligible clean cost (PR-AUC 0.9993 → 0.9987; Hulk recall unchanged at 0.998). The attacker's *feature-space* success stays pinned at 100% throughout — but those evasions are now entirely infeasible, so the permanent "stalemate" one would read off the feature-space curve is an illusion; the realisability lens shows the defender has closed the only contest that matters. The Random Forest is already at this fixed point from round 0 (0% realisable throughout — nothing to harden against); its feature-space success is low (≈30–40% at this budget) and does not systematically move. Neither trajectory oscillates or diverges; both reach an empirical fixed point — *no realisable evasion available to the attacker* — which `docs/game_theory.md` is careful to call exactly that, **not** a Nash equilibrium: the existence preconditions (finite / compact / convex–concave / zero-sum) do not hold, and the relation to the project's CFR poker-solver heritage is conceptual, not formal. `docs/synthesis.md` draws the three layers together around the feasibility constraint as the through-line. *Reproduce:* `python experiments/arms_race.py`.
 
 ## References
 
