@@ -17,6 +17,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7.4", "ruff>=0.1", "matplotlib>=3.7"]
+# Packet-level realisability (item 7): scapy emits the witness pcap. Kept optional
+# so the core install stays light; realisability.py imports it lazily.
+pcap = ["scapy>=2.5"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

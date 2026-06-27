@@ -1,0 +1,67 @@
+{
+  "config": {
+    "n_samples": 25,
+    "budget": 1200,
+    "seed": 0,
+    "data": "data/raw/cicids2017/MachineLearningCVE/Wednesday-workingHours.pcap_ISCX.csv"
+  },
+  "calibration": {
+    "Packet Length Mean": {
+      "slope": 0.9258270054296691,
+      "intercept": 1.463980202478634,
+      "resid_std": 13.283128230044785,
+      "rel_resid": 0.028661044757792013
+    },
+    "Packet Length Std": {
+      "slope": 0.934589661397298,
+      "intercept": 9.627358806569648,
+      "resid_std": 22.720276797602228,
+      "rel_resid": 0.04735316648664008
+    },
+    "Packet Length Variance": {
+      "slope": 0.8537778888166355,
+      "intercept": 36517.45944020695,
+      "resid_std": 94040.65978954962,
+      "rel_resid": 4.911398904984423
+    }
+  },
+  "models": {
+    "logreg": {
+      "n_successful_evasions": 25,
+      "survival_rate": 0.52,
+      "verdicts": {
+        "realisable": 13,
+        "reverted": 0,
+        "infeasible": 12,
+        "uncertain": 0
+      },
+      "example_reverted_packet_length_shift": null,
+      "witness_pcaps": [
+        {
+          "path": "experiments/pcaps/logreg_realisable_0.pcap",
+          "packets": 8
+        },
+        {
+          "path": "experiments/pcaps/logreg_realisable_1.pcap",
+          "packets": 9
+        },
+        {
+          "path": "experiments/pcaps/logreg_realisable_2.pcap",
+          "packets": 8
+        }
+      ]
+    },
+    "rf": {
+      "n_successful_evasions": 25,
+      "survival_rate": 0.0,
+      "verdicts": {
+        "realisable": 0,
+        "reverted": 0,
+        "infeasible": 25,
+        "uncertain": 0
+      },
+      "example_reverted_packet_length_shift": null,
+      "witness_pcaps": []
+    }
+  }
+}
