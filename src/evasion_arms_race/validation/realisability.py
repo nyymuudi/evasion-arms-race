@@ -52,7 +52,7 @@ from typing import Callable, Mapping, Sequence
 import numpy as np
 
 from evasion_arms_race.features.partition import normalize
-from evasion_arms_race.features.projection import project
+from evasion_arms_race.features.projection import ProjectionResult, project
 
 # Hard protocol bounds. CICFlowMeter packet length is the IP datagram length;
 # offload (TSO/GRO) means captured "packets" can exceed the Ethernet MTU, so the
@@ -232,6 +232,98 @@ def is_feasible(v: Mapping[str, float]) -> Feasibility:
     size = forward_size_feasible(v)
     timing = forward_timing_feasible(v)
     return Feasibility(size.feasible and timing.feasible, size.reasons + timing.reasons)
+
+
+# --------------------------------------------------------------------------- #
+# Manifold projection: confine the SEARCH to the realisable set (not a post-filter)
+# --------------------------------------------------------------------------- #
+def _clip(x, lo, hi):
+    return float(min(max(x, lo), hi))
+
+
+def manifold_project(
+    perturbed: Mapping[str, float], clean: Mapping[str, float], source=None,
+    calib: Calibration = IDENTITY_CALIBRATION,
+) -> ProjectionResult:
+    """Project a candidate onto the REALISABLE manifold, so a search can call this
+    every step instead of post-filtering with is_feasible().
+
+    This is the experiment that answers the headline claim's obvious objection: a
+    0% realisable rate obtained by free-space search + post-filtering is ambiguous
+    (the search never looked on the manifold). Here every candidate the detector
+    ever sees already satisfies is_feasible BY CONSTRUCTION.
+
+    Implementation: the existing project() (frozen / floor / box / derived) followed
+    by a deterministic, IDEMPOTENT clamp-and-recompute that enforces exactly the
+    is_feasible constraints. This is NOT a nearest-point projection onto the
+    (non-convex) feasible set -- which would be unstable -- but constraint
+    enforcement by construction, which lands on the manifold deterministically.
+    Bhatia-Davis is necessary AND sufficient for a multiset with the given
+    [min, max, mean, std] to exist, so a point that survives is realisable.
+    """
+    base = project(perturbed, clean, source) if source is not None else project(perturbed, clean)
+    v = dict(base.vector)
+    cl = {normalize(k): float(x) for k, x in clean.items()}
+
+    # ---- forward sizes: 0 <= min <= mean <= max, Var <= (max-mean)(mean-min),
+    #      Total = N*mean ------------------------------------------------------ #
+    nf = max(1.0, round(v["Total Fwd Packets"]))
+    nf = max(nf, round(cl.get("Total Fwd Packets", 1.0)))          # keep the DoS volume floor
+    mn = _clip(v["Fwd Packet Length Min"], MIN_LEN, MAX_LEN)
+    mx = _clip(v["Fwd Packet Length Max"], MIN_LEN, MAX_LEN)
+    if mn > mx:
+        mn, mx = mx, mn
+    mean = _clip(v["Fwd Packet Length Mean"], mn, mx)
+    std = _clip(v["Fwd Packet Length Std"], 0.0, float(np.sqrt(max(0.0, (mx - mean) * (mean - mn)))))
+    v["Total Fwd Packets"] = float(nf)
+    v["Fwd Packet Length Min"], v["Fwd Packet Length Max"] = mn, mx
+    v["Fwd Packet Length Mean"], v["Fwd Packet Length Std"] = mean, std
+    v["Total Length of Fwd Packets"] = nf * mean
+    if "Avg Fwd Segment Size" in v:
+        v["Avg Fwd Segment Size"] = mean                            # = fwd mean in CICFlowMeter
+    if "Subflow Fwd Packets" in v:
+        v["Subflow Fwd Packets"] = max(nf, cl.get("Subflow Fwd Packets", 0.0))
+    if "Subflow Fwd Bytes" in v:
+        v["Subflow Fwd Bytes"] = max(nf * mean, cl.get("Subflow Fwd Bytes", 0.0))
+
+    # ---- forward timing: duration short enough to keep the flood rate, then
+    #      IAT min<=mean<=max<=duration, Var bound, Total=(N-1)*mean ----------- #
+    dur = max(1.0, v["Flow Duration"])
+    clean_rate = cl.get("Fwd Packets/s", 0.0)
+    if clean_rate > 0:
+        dur = min(dur, nf * 1e6 / clean_rate)                       # rate = N/(dur/1e6) >= clean
+    dur = max(dur, 1.0)
+    v["Flow Duration"] = dur
+    if nf >= 2:
+        imn = _clip(v["Fwd IAT Min"], 0.0, dur)
+        imx = _clip(v["Fwd IAT Max"], 0.0, dur)
+        if imn > imx:                                              # enforce min <= max
+            imn, imx = imx, imn
+        imean = _clip(v["Fwd IAT Mean"], imn, imx)
+        istd = _clip(v["Fwd IAT Std"], 0.0, float(np.sqrt(max(0.0, (imx - imean) * (imean - imn)))))
+        v["Fwd IAT Min"], v["Fwd IAT Max"] = imn, imx
+        v["Fwd IAT Mean"], v["Fwd IAT Std"] = imean, istd
+        v["Fwd IAT Total"] = (nf - 1) * imean
+    if "Flow IAT Total" in v:
+        v["Flow IAT Total"] = dur
+
+    # ---- recompute the dependent aggregates from the now-consistent atomics --- #
+    nb = v.get("Total Backward Packets", 0.0)
+    lbwd = v.get("Total Length of Bwd Packets", 0.0)
+    tot_pk = nf + nb
+    tot_by = v["Total Length of Fwd Packets"] + lbwd
+    v["Fwd Packets/s"] = nf / (dur / 1e6)
+    if "Flow Packets/s" in v:
+        v["Flow Packets/s"] = tot_pk / (dur / 1e6)
+    if "Flow Bytes/s" in v:
+        v["Flow Bytes/s"] = tot_by / (dur / 1e6)
+    if "Down/Up Ratio" in v:
+        v["Down/Up Ratio"] = (nb / nf) if nf > 0 else 0.0
+    if "Average Packet Size" in v:
+        v["Average Packet Size"] = (tot_by / tot_pk) if tot_pk > 0 else 0.0
+    v.update(reconstruct_packet_length_features(v, calib))         # the five pooled stats
+
+    return ProjectionResult(vector=v, unreconstructable=[], clamped=[])
 
 
 # --------------------------------------------------------------------------- #

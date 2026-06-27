@@ -189,13 +189,19 @@ def attack_sample(
     benign_refs_raw: list[dict[str, float]],
     config: AttackConfig = AttackConfig(),
     source=None,
+    projector=None,
 ) -> AttackResult:
     """Run a projected boundary attack on a single Hulk sample.
 
     `clean_raw` is the original Hulk flow (raw feature dict). `benign_refs_raw`
     are real benign flows used to seed an initial adversarial point. Every point
     the oracle scores as the attack's real budget is projected onto the feasible
-    set first, via project(perturbed, clean_raw, source).
+    set first, via `projector(perturbed, clean_raw, source)`.
+
+    `projector` defaults to features.projection.project (the Layer A feasibility
+    set). Pass validation.realisability.manifold_project to confine the SEARCH to
+    the realisable manifold instead of post-filtering -- the experiment that
+    disambiguates "robust to feasible attacks" from "search wandered off-manifold".
 
     `source` is any ControlSource (a Partition or a rule-derived
     ClassificationReport). It MUST be keyed by the SAME feature set as the data;
@@ -205,6 +211,8 @@ def attack_sample(
     """
     if source is None:
         source = classify(oracle.feature_names)
+    if projector is None:
+        projector = project
     rng = np.random.default_rng(config.seed)
     names = oracle.feature_names
 
@@ -236,7 +244,7 @@ def attack_sample(
         Returns (decision_projected, proj_scaled, projres).
         """
         cand_raw = oracle.unscale(cand_scaled)
-        projres = project(oracle.to_dict(cand_raw), clean_raw, source)
+        projres = projector(oracle.to_dict(cand_raw), clean_raw, source)
         proj_scaled = oracle.scale(oracle.to_vec(projres.vector))
         dec_proj = oracle.decision_scaled(proj_scaled, diagnostic=False)
 

@@ -1,0 +1,44 @@
+{
+  "config": {
+    "n_samples": 20,
+    "budget": 800,
+    "power_budget": 2000,
+    "seed": 0
+  },
+  "results": {
+    "logreg": {
+      "free_postfilter": {
+        "feature_success_rate": 1.0,
+        "realisable_rate": 0.45,
+        "n_first_evasions": 9
+      },
+      "manifold": {
+        "feature_success_rate": 1.0,
+        "realisable_rate": 0.85,
+        "n_first_evasions": 17
+      },
+      "manifold_power": {
+        "feature_success_rate": 1.0,
+        "realisable_rate": 0.85,
+        "n_first_evasions": 17
+      }
+    },
+    "rf": {
+      "free_postfilter": {
+        "feature_success_rate": 0.9,
+        "realisable_rate": 0.0,
+        "n_first_evasions": 0
+      },
+      "manifold": {
+        "feature_success_rate": 1.0,
+        "realisable_rate": 1.0,
+        "n_first_evasions": 20
+      },
+      "manifold_power": {
+        "feature_success_rate": 1.0,
+        "realisable_rate": 1.0,
+        "n_first_evasions": 20
+      }
+    }
+  }
+}

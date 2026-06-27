@@ -134,6 +134,34 @@ def test_survival_summary_counts():
     assert s["verdicts"]["reverted"] == 1
 
 
+def test_manifold_project_output_is_always_feasible():
+    v = _clean_vector()
+    v["Fwd Packet Length Std"] = 5000.0     # variance bound violation
+    v["Fwd IAT Max"] = 9_000_000.0          # IAT max > duration
+    v["Fwd IAT Min"] = 8_000_000.0          # IAT min > max (ordering violation)
+    v["Total Length of Fwd Packets"] = 1.0  # Total != N*mean
+    mp = R.manifold_project(v, v).vector
+    assert R.is_feasible(mp).feasible        # snapped onto the manifold by construction
+
+
+def test_manifold_project_is_idempotent():
+    v = _clean_vector()
+    v["Fwd Packet Length Std"] = 5000.0
+    once = R.manifold_project(v, v).vector
+    twice = R.manifold_project(once, v).vector
+    for f in ("Fwd Packet Length Std", "Total Length of Fwd Packets",
+              "Fwd IAT Total", "Fwd Packets/s", "Flow Duration"):
+        assert once[f] == pytest.approx(twice[f], rel=1e-9, abs=1e-6)
+
+
+def test_manifold_project_preserves_dos_rate_floor():
+    v = _clean_vector()
+    v["Flow Duration"] = 5_000_000.0         # attacker tries to stretch the flow (slow the flood)
+    mp = R.manifold_project(v, v).vector
+    # forward packet rate must not fall below the clean sample's
+    assert mp["Fwd Packets/s"] >= v["Fwd Packets/s"] - 1e-6
+
+
 def test_emit_pcap_writes_packets(tmp_path):
     pytest.importorskip("scapy")
     v = _clean_vector()

@@ -2,15 +2,18 @@
 
 *One through-line ties three layers together: the **feasibility constraint** — the
 rule that an attacker may only move what it actually controls, and only to values a
-real packet stream could produce. Layer A shows the constraint bounds **evasion**;
-Layer B shows it bounds **poisoning**; Layer C shows how it **shapes the dynamics**
-of the iterated attack/retrain game. Remove the constraint and every result inflates
-into the usual, unrealisable adversarial-ML numbers. Keep it, and the picture is
-quieter, more honest, and — for a defender — far more actionable.*
+real packet stream could produce. The constraint is the apparatus of all three layers:
+Layer A measures **evasion** under it, Layer B **poisoning** under it, Layer C the
+**dynamics** of the iterated attack/retrain game under it. The hardest lesson is
+methodological: the constraint must shape the **search**, not be applied as a filter —
+and when it does, evasions that a post-filter called impossible reappear. The honest
+picture is not "realisability saves the detector" (a headline this project raised and
+then withdrew) but "realisability is decisive to measure correctly, and most ways of
+measuring it are wrong."*
 
-This document is written to survive a technical reader. Where a result is negative or
-partial, it is reported as such; the project's value is in the discipline, not in a
-dramatic collapse.
+This document is written to survive a technical reader. Where a result is negative,
+partial, or a correction of an earlier claim, it is reported as such; the project's
+value is in the discipline and the self-correction, not in a dramatic collapse.
 
 ## The object of study
 
@@ -25,7 +28,7 @@ projection** confines any perturbation to (a) features the attacker sets, (b) wi
 protocol-legal and DoS-functional bounds, (c) recomputing the dependent aggregates.
 Layer A item 7 adds the packet-level check that the moments are realisable at all.
 
-## Layer A — the constraint bounds evasion
+## Layer A — measuring evasion under the constraint (and a corrected headline)
 
 A decision-based **boundary attack** (consistent with the black-box model) calls the
 feasibility projection on every candidate, then item 7 validates the survivors at the
@@ -34,16 +37,21 @@ packet level.
 - **In feature space, both detectors are fully evadable** — 100% success for logistic
   regression and the random forest alike. Taken alone, this is the usual (inflated)
   adversarial-ML headline.
-- **Under realisability, the picture reverses.** Of the successful evasions, the
-  fraction that correspond to a *sendable packet stream* is **52% (logistic
-  regression) and 0% (random forest)**. Every random-forest "evasion" is statistically
-  infeasible — the search produced flows whose moments (e.g. variance beyond the
-  Bhatia–Davis bound, `IAT max > duration`, `Total ≠ N·mean`) no packet multiset can
-  realise.
-- So the random forest's apparent vulnerability was an **artefact of an over-powered
-  attacker roaming infeasible feature space.** The ablation diagnostics had already
-  shown the discriminative signal is distributed and largely lives in features the
-  attacker cannot touch; item 7 turns that into a hard, quantified realisability gap.
+- **A realisability *post-filter* seemed to reverse this.** Of the free-search
+  evasions, the fraction passing the packet-level feasibility check is **52% (LR) and
+  0% (RF)** — every random-forest "evasion" failing on moments (variance beyond the
+  Bhatia–Davis bound, `IAT max > duration`, `Total ≠ N·mean`) no multiset can realise.
+  The first draft of this synthesis concluded the random forest was robust to
+  realisable attacks. **That conclusion was wrong, and a pre-registered stress test
+  caught it.**
+- **Constraining the *search* to the manifold overturns it.** Building the
+  realisability projection into the search (`manifold_project`, not a post-filter)
+  takes realisable evasion to **85% (LR) and 100% (RF)**, converged (flat to a 2000-query
+  budget). The 0% was a **search artefact**: a free-space search simply never looked on
+  the manifold, and the filter then declared its off-manifold output "impossible". The
+  honest result is that *both* detectors are evadable by realisable traffic; the
+  methodological lesson — realisability must shape the search, not be bolted on as a
+  filter — is the sharper contribution. Full account in `docs/manifold_experiment.md`.
 
 The five packet-length aggregates once deferred as "unreconstructable" turned out to
 be reconstructable in closed form (Min/Max exactly; Mean/Std/Variance via the law of
@@ -72,8 +80,9 @@ dust.
   budgets; the random forest is the more poison-robust.
 - **Corollary tying back to Layer A:** the *realistic* auto-labelling attacker (whose
   poison must be a successful realisable evasion) has its budget gated by Layer A's
-  realisable rate — 52% for LR, **0% for RF**. The random forest cannot be poisoned
-  through that channel at all.
+  realisable rate. With the corrected (manifold) rate — ≈85% (LR), ≈100% (RF) — that
+  channel is *open*, not closed: the earlier reading that the random forest could not
+  be poisoned through it depended on the 0% that the Layer A stress test withdrew.
 
 ## Layer C — the constraint shapes the arms race
 
@@ -91,10 +100,12 @@ always doable and the part that is not:
   is an artefact; the realisability lens shows the defender closes the only contest
   that matters. The random forest is already at this fixed point from round 0 (0%
   realisable throughout — nothing to harden against), with low (≈30-40%) and
-  non-decreasing feature-space success. Neither trajectory oscillates or diverges;
-  both reach the same empirical fixed point — *no realisable evasion available to the
-  attacker*. The feasibility constraint is thus not only what bounds the attack
-  (Layers A-B) but the very axis on which the defence operates and the loop settles.
+  non-decreasing feature-space success. Neither trajectory oscillates or diverges.
+  **Caveat (Layer A correction):** this loop measures the *free-search + post-filter*
+  realisable rate, which the manifold experiment shows under-reports realisable
+  evasion. So "43% → 0%" describes the free-search realisable gap closing; whether
+  adversarial training closes the larger *manifold* gap is open. Re-running the loop
+  with the manifold-constrained attack is the natural next step.
 - **Equilibrium claims (mostly *not* available here).** `docs/game_theory.md` states
   the interaction as a game and checks the preconditions: the strategy spaces are
   infinite and non-convex, the payoffs discontinuous and non-concave, the game
@@ -111,18 +122,24 @@ no regret bound). Keeping that distinction is the point of Layer C.
 
 ## What the project demonstrates
 
-1. **Realisability is the difference between a number and a result.** The same attack
-   reads as "100% evasion" or "0–52% realisable evasion" depending solely on whether
-   the feasibility constraint is enforced. Reporting the former without the latter is
-   how adversarial-ML success rates become fiction.
-2. **A strong, separable detector is hard to break *realistically*.** Across all three
-   layers, the honest finding is robustness, not collapse — bounded evasion, bounded
-   poisoning, a dynamic that does not run away. The interesting science is in
-   *measuring the bound*, not in manufacturing a breach.
-3. **Discipline with terminology.** The project deliberately under-claims: empirical
-   dynamics are not equilibria, feature-space success is not realisable success, and a
-   near-perfect PR-AUC is treated as a warning to investigate (ablation, realisability)
-   rather than a trophy.
+1. **How you enforce realisability decides the result.** Feature-space success (100%)
+   over-states evasion; a realisability *post-filter* on a free-space search
+   *under*-states it (RF 0%); only building realisability into the search measures it
+   honestly (RF 100%). The same attack and the same feasibility definition yield 0% or
+   100% depending solely on *where the search was allowed to look*. Reporting a
+   post-filtered rate as if it measured feasible robustness is a third way — beyond the
+   well-known feature-space inflation — that adversarial-ML numbers mislead.
+2. **Under a correct (manifold-constrained) search, both detectors are evadable by
+   realisable traffic** — LR ≈85%, RF ≈100%. The project's first headline ("realisability
+   saves the random forest") was a measurement artefact, and the project overturned it
+   with a pre-registered stress test rather than defending it. The robustness results
+   that survive are narrower and threshold-specific (Layer B: ranking PR-AUC resists
+   poisoning; the operating point does not), and are reported as such.
+3. **Discipline with terminology, and the willingness to be wrong.** Empirical dynamics
+   are not equilibria; feature-space success is not realisable success; a near-perfect
+   PR-AUC is a prompt to investigate, not a trophy — and a headline that fails its own
+   stress test is corrected, not buried. The instrument that caught the error
+   (`docs/manifold_experiment.md`) is part of the contribution.
 
 ## Reproducibility
 
