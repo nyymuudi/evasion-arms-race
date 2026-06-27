@@ -1,0 +1,138 @@
+{
+  "config": {
+    "clean_train_size": 30000,
+    "seed": 0,
+    "data": "data/raw/cicids2017/MachineLearningCVE/Wednesday-workingHours.pcap_ISCX.csv"
+  },
+  "reference_pr_auc": {
+    "logreg": 0.999306809032665,
+    "rf": 0.99996910310195
+  },
+  "fractions": [
+    0.0,
+    0.005,
+    0.01,
+    0.02,
+    0.05,
+    0.1,
+    0.2
+  ],
+  "strategies": {
+    "label_flip": [
+      {
+        "fraction": 0.0,
+        "n_poison": 0,
+        "pr_auc_logreg": 0.999306809032665,
+        "pr_auc_rf": 0.9999691031019501,
+        "hulk_recall_logreg": 0.9981575150788271,
+        "hulk_recall_rf": 0.9984530079435435
+      },
+      {
+        "fraction": 0.005,
+        "n_poison": 150,
+        "pr_auc_logreg": 0.9990095557374773,
+        "pr_auc_rf": 0.9999614819856649,
+        "hulk_recall_logreg": 0.9981401331456085,
+        "hulk_recall_rf": 0.9974274738836454
+      },
+      {
+        "fraction": 0.01,
+        "n_poison": 300,
+        "pr_auc_logreg": 0.9989665111945292,
+        "pr_auc_rf": 0.9999581398961005,
+        "hulk_recall_logreg": 0.9981227512123898,
+        "hulk_recall_rf": 0.9974448558168639
+      },
+      {
+        "fraction": 0.02,
+        "n_poison": 600,
+        "pr_auc_logreg": 0.9986340937521052,
+        "pr_auc_rf": 0.9999430177756561,
+        "hulk_recall_logreg": 0.9979663138134224,
+        "hulk_recall_rf": 0.9966974326884636
+      },
+      {
+        "fraction": 0.05,
+        "n_poison": 1500,
+        "pr_auc_logreg": 0.9985444652377111,
+        "pr_auc_rf": 0.9998940050707018,
+        "hulk_recall_logreg": 0.9979489318802037,
+        "hulk_recall_rf": 0.9907701934609168
+      },
+      {
+        "fraction": 0.1,
+        "n_poison": 3000,
+        "pr_auc_logreg": 0.9982937708394123,
+        "pr_auc_rf": 0.9997910376188808,
+        "hulk_recall_logreg": 0.7377066277311363,
+        "hulk_recall_rf": 0.8093723383914759
+      },
+      {
+        "fraction": 0.2,
+        "n_poison": 6000,
+        "pr_auc_logreg": 0.9967938309911718,
+        "pr_auc_rf": 0.999567487452941,
+        "hulk_recall_logreg": 0.7031687264257531,
+        "hulk_recall_rf": 0.754271610088474
+      }
+    ],
+    "boundary": [
+      {
+        "fraction": 0.0,
+        "n_poison": 0,
+        "pr_auc_logreg": 0.999306809032665,
+        "pr_auc_rf": 0.9999691031019502,
+        "hulk_recall_logreg": 0.9981575150788271,
+        "hulk_recall_rf": 0.9984530079435435
+      },
+      {
+        "fraction": 0.005,
+        "n_poison": 150,
+        "pr_auc_logreg": 0.9993998901235924,
+        "pr_auc_rf": 0.9996763875312834,
+        "hulk_recall_logreg": 0.9981575150788271,
+        "hulk_recall_rf": 0.9975665293493943
+      },
+      {
+        "fraction": 0.01,
+        "n_poison": 300,
+        "pr_auc_logreg": 0.9990032626710443,
+        "pr_auc_rf": 0.9995254897349901,
+        "hulk_recall_logreg": 0.9979836957466409,
+        "hulk_recall_rf": 0.9971667448853662
+      },
+      {
+        "fraction": 0.02,
+        "n_poison": 600,
+        "pr_auc_logreg": 0.9988987917633338,
+        "pr_auc_rf": 0.9995568188941614,
+        "hulk_recall_logreg": 0.9979141680137665,
+        "hulk_recall_rf": 0.9970972171524917
+      },
+      {
+        "fraction": 0.05,
+        "n_poison": 1500,
+        "pr_auc_logreg": 0.9989276427135412,
+        "pr_auc_rf": 0.9993691007807849,
+        "hulk_recall_logreg": 0.9401887677947541,
+        "hulk_recall_rf": 0.9920912203855313
+      },
+      {
+        "fraction": 0.1,
+        "n_poison": 3000,
+        "pr_auc_logreg": 0.9983163395572787,
+        "pr_auc_rf": 0.9992039692237783,
+        "hulk_recall_logreg": 0.9138899028349933,
+        "hulk_recall_rf": 0.9831395247779458
+      },
+      {
+        "fraction": 0.2,
+        "n_poison": 6000,
+        "pr_auc_logreg": 0.9978054080633643,
+        "pr_auc_rf": 0.9988694140933667,
+        "hulk_recall_logreg": 0.9129860423076255,
+        "hulk_recall_rf": 0.9666788340199197
+      }
+    ]
+  }
+}

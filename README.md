@@ -46,8 +46,9 @@ evasion-arms-race/
 │   │   └── projection.py       # feasibility projection (frozen/constrained/derived)
 │   ├── detector/        # baseline IDS the attack evades (PR-AUC, temporal eval)
 │   │   └── baseline.py
-│   ├── attack/          # black-box evasion search calling project() each step
-│   │   └── blackbox.py
+│   ├── attack/          # black-box evasion search + realisability-constrained poisoning
+│   │   ├── blackbox.py
+│   │   └── poisoning.py
 │   ├── metrics/         # evasion success rate, perturbation size, query budget
 │   │   └── evasion.py
 │   └── validation/      # pcap-level realisability check (resolves aggregates)
@@ -76,7 +77,12 @@ The project is built in three layers of increasing ambition.
 - [x] (6) Metrics module: success-vs-perturbation tradeoff curve, three-class outcome decomposition, per-feature movement vs detector reliance
 - [x] (7) Packet-level realisability validation — feasibility checks + reconstruct the pooled length features + re-query the detector; scapy witness pcap
 
-**Layer B — Poisoning**. Attacker corrupts the detector's retraining data [14]; quantify the poisoning threshold at which detection collapses.
+**Layer B — Poisoning** *(complete)*. Attacker injects budget-limited, **realisability-projected** Hulk samples — they pass the same `project()` + packet-level feasibility check as the evasion samples and keep the DoS floor — labelled benign into the detector's retraining data [14]; evaluation is on the clean held-out test set the attacker never saw. Black-box, chosen-label injection (the more realistic auto-labelling attacker is strictly weaker: its budget is gated by the item-7 realisable-evasion rate, 52% LR / 0% RF).
+- [x] Threat model + retraining pipeline (clean train ∪ projected poison → retrain → evaluate on clean test)
+- [x] Two strategies: random label-flip vs boundary-selected poison (nearest the current boundary via black-box query)
+- [x] Poison-threshold sweep: PR-AUC and Hulk recall vs poison fraction, both strategies, both detectors
+
+**Finding.** Realistic poisoning does **not** collapse threshold-independent detection: PR-AUC is nearly flat even at a 20% poison budget (LR 0.9993 → 0.9968, RF 1.0000 → 0.9996). The strong Hulk/benign separability the ablation diagnostics found is exactly what makes the detector hard to poison in ranking terms — an honest negative result, reported as such. What *does* degrade is the **operating point**: at the deployed 0.5 threshold, Hulk recall falls to ≈0.70 (LR) / ≈0.75 (RF) at 20% label-flip poison — roughly a quarter to a third of attacks slip through — because the poison shifts predicted probabilities below threshold without destroying the ranking. Strategy nuance: boundary-selected poison is more sample-efficient at low budgets (it dents LR recall already at 5%), while random label-flip, carrying more confidently-wrong mass, does more damage at high budgets. As anticipated from Layer A, the Random Forest is the more poison-robust of the two.
 
 **Layer C — Robust defence + game-theoretic analysis**. Adversarial training, then model the attack/retrain loop explicitly as a game and study whether it converges to an equilibrium or oscillates.
 
