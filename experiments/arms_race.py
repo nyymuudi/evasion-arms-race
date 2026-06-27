@@ -40,7 +40,7 @@ MODEL_LABEL = {"logreg": "Logistic Regression", "rf": "Random Forest"}
 
 
 def run_model_loop(model_name, Xc, yc, clean, source, hulk_pool_rows, benign_refs,
-                   rounds, n_attack, cfg, replication, seed):
+                   rounds, n_attack, cfg, replication, seed, projector=None):
     """One model's arms race. Returns a per-round record list."""
     rng = np.random.default_rng(seed)
     order = rng.permutation(hulk_pool_rows)            # fresh Hulk samples per round
@@ -50,7 +50,7 @@ def run_model_loop(model_name, Xc, yc, clean, source, hulk_pool_rows, benign_ref
     for r in range(rounds):
         hs_rows = order[r * n_attack:(r + 1) * n_attack]
         hulk_samples = [clean.X_train.iloc[i].to_dict() for i in hs_rows]
-        outcome = attack_detector(det, hulk_samples, benign_refs, source, cfg)
+        outcome = attack_detector(det, hulk_samples, benign_refs, source, cfg, projector=projector)
         record.append({
             "round": r,
             "pr_auc": det.pr_auc,
@@ -84,7 +84,9 @@ def main() -> int:
     ap.add_argument("--replication", type=int, default=5)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--fig-dir", default="experiments/figures")
-    ap.add_argument("--summary-out", default="experiments/arms_race.json")
+    ap.add_argument("--manifold", action="store_true",
+                    help="confine the attack to the realisable manifold (the follow-up "
+                         "experiment: does adversarial training close the MANIFOLD gap?)")
     args = ap.parse_args()
 
     import matplotlib
@@ -100,21 +102,34 @@ def main() -> int:
                    for i in benign_rows[: args.n_refs]]
     cfg = AttackConfig(query_budget=args.budget, n_init_refs=args.n_refs, seed=args.seed)
 
-    print(f"arms race: {args.rounds} rounds, {args.n_attack} fresh attacks/round, "
+    # Manifold mode: confine the search to the realisable set, so every evasion the
+    # defender trains on is realisable by construction and the tracked rate is the
+    # TRUE manifold realisable rate (not the free-search post-filter rate).
+    projector, tag, mode = None, "", "free-search"
+    if args.manifold:
+        from functools import partial
+        import pandas as pd
+        from evasion_arms_race.validation.realisability import fit_calibration, manifold_project
+        calib = fit_calibration(pd.concat([clean.X_train, clean.X_test], ignore_index=True))
+        projector = partial(manifold_project, calib=calib)
+        tag, mode = "_manifold", "manifold-constrained"
+
+    print(f"arms race [{mode}]: {args.rounds} rounds, {args.n_attack} fresh attacks/round, "
           f"clean train {len(yc)}, budget {args.budget}\n")
     records = {}
     for m in MODELS:
         print(f"[{MODEL_LABEL[m]}]")
         records[m] = run_model_loop(m, Xc, yc, clean, source, hulk_pool_rows,
                                     benign_refs, args.rounds, args.n_attack, cfg,
-                                    args.replication, args.seed)
+                                    args.replication, args.seed, projector=projector)
         print()
 
     summary = {"config": {"clean_train_size": len(yc), "rounds": args.rounds,
                           "n_attack": args.n_attack, "budget": args.budget,
-                          "replication": args.replication, "seed": args.seed},
+                          "replication": args.replication, "seed": args.seed,
+                          "mode": mode},
                "records": records}
-    out = Path(args.summary_out); out.parent.mkdir(parents=True, exist_ok=True)
+    out = Path(f"experiments/arms_race{tag}.json"); out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(summary, indent=2))
 
     # Trajectory figure: the arms-race dynamics per model.
@@ -129,12 +144,12 @@ def main() -> int:
         ax.set_ylim(-0.02, 1.05); ax.grid(alpha=0.3); ax.set_xticks(rs)
     axes[0].set_ylabel("rate")
     axes[1].legend(fontsize=8, loc="center right")
-    fig.suptitle("Attack/retrain arms race — empirical dynamics (not an equilibrium claim)")
+    fig.suptitle(f"Attack/retrain arms race [{mode}] — empirical dynamics (not an equilibrium claim)")
     fig.tight_layout()
     fig_dir = Path(args.fig_dir); fig_dir.mkdir(parents=True, exist_ok=True)
-    fig.savefig(fig_dir / "arms_race_trajectory.png", dpi=120)
+    fig.savefig(fig_dir / f"arms_race{tag}_trajectory.png", dpi=120)
     plt.close(fig)
-    print(f"summary -> {out}   figure -> {fig_dir}/arms_race_trajectory.png")
+    print(f"summary -> {out}   figure -> {fig_dir}/arms_race{tag}_trajectory.png")
     return 0
 
 

@@ -83,22 +83,23 @@ class AttackOutcome:
 
 
 def attack_detector(det: TrainedDetector, hulk_samples: list[dict],
-                    benign_refs: list[dict], source, cfg: AttackConfig) -> AttackOutcome:
+                    benign_refs: list[dict], source, cfg: AttackConfig,
+                    projector=None) -> AttackOutcome:
     """Run the Layer A boundary attack against `det`. Returns ALL successful
-    (project()-constrained) evasions -- the adversarial-training material in the
-    Layer A sense -- and, separately, the subset that pass the stricter item-7
-    feasibility check, whose RATE is the on-thesis robustness metric.
+    evasions -- the adversarial-training material -- and, separately, the subset
+    that pass the item-7 feasibility check, whose RATE is the on-thesis metric.
 
-    Training on the project()-constrained set (not the is_feasible subset) is a
-    deliberate choice: the strict realisable yield is often ~0 (item 7), which
-    would leave nothing to train on. We instead train on what Layer A calls
-    feasible and report the realisable rate as a tracked quality metric.
+    `projector` selects the search space: the default (None -> project) is the
+    free-space search whose realisable yield is read off by post-filter; pass
+    validation.realisability.manifold_project to confine the search to the
+    realisable manifold, in which case every success is realisable by construction
+    (evasions == realisable_evasions) and the rate is the true manifold rate.
     """
     n = len(hulk_samples)
     evasions, realisable, l2s = [], [], []
     for clean in hulk_samples:
         oracle = Oracle(det.model, det.scaler, det.feature_names)
-        res = attack_sample(clean, oracle, benign_refs, cfg, source)
+        res = attack_sample(clean, oracle, benign_refs, cfg, source, projector=projector)
         if res.success and res.best_vector:
             evasions.append(res.best_vector)
             l2s.append(res.l2_controllable)

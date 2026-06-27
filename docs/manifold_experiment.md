@@ -111,3 +111,42 @@ This reversal is the system working as intended: a pre-registered stress test of
 project's own headline, reported honestly when it failed. A modest, exact result
 ("realisable evasion is high once you search the manifold; post-filtering misleads")
 is worth more than an oversold one ("realisability saves the Random Forest").
+
+## Follow-up: does adversarial training close the *manifold* gap?
+
+The correction above also indicts Layer C, which had measured the arms race with the
+free-search + post-filter (so its "LR realisable 43% → 0%" was the post-filter gap
+closing, not the real one). The natural question: re-run the attack/retrain loop with
+the **manifold-constrained** attack — does adversarial training on genuinely realisable
+evasions robustify the detector against realisable attacks? (`experiments/arms_race.py
+--manifold`; clean train 30k, 30 fresh attacks/round, budget 800, 4 rounds.)
+
+| round | LR realisable | RF realisable |
+|---|---|---|
+| 0 (clean detector) | 1.00 | 0.97 |
+| 1 | 1.00 | 0.30 |
+| 2 | 1.00 | 0.33 |
+| 3 | 1.00 | 0.40 |
+
+Clean-test PR-AUC stays ≈flat (LR 0.9993 → 0.9986; RF ≈1.0), so cost is negligible.
+The answer is detector-dependent and, in both cases, **the gap does not close**:
+
+- **Logistic regression: adversarial training does nothing.** Realisable evasion stays
+  pinned at **100%** for all four rounds. A linear boundary cannot carve the benign
+  half of a large manifold out from under the attacker while preserving clean accuracy;
+  fresh realisable evasions are always available. The free-search loop's tidy "43% → 0%
+  convergence" was an artefact of the post-filter — the true (manifold) dynamic shows no
+  robustification at all.
+- **Random forest: partial, and it plateaus.** Realisable evasion drops sharply after
+  one round (97% → 30%) — the forest memorises the round-0 evasion regions as attack
+  leaves — but then **stalls around 30–40% and even drifts back up** as the attacker
+  finds realisable evasions in the leaves the defence has not covered. The defence
+  reduces but never eliminates realisable evasion.
+
+**Conclusion.** Adversarial training against a feasibility-constrained attacker buys
+*limited, detector-dependent, and incomplete* robustness here — nothing for logistic
+regression, a partial and plateauing reduction for the random forest — and closes the
+realisable gap for neither. As with the headline, this is only visible because the
+attack searches the manifold: the post-filtered free-search loop reported a reassuring
+"converges to zero" for logistic regression that the manifold loop flatly contradicts.
+The measurement method is decisive for the *defence* conclusion too, not only the attack.

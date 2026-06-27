@@ -101,11 +101,16 @@ always doable and the part that is not:
   that matters. The random forest is already at this fixed point from round 0 (0%
   realisable throughout — nothing to harden against), with low (≈30-40%) and
   non-decreasing feature-space success. Neither trajectory oscillates or diverges.
-  **Caveat (Layer A correction):** this loop measures the *free-search + post-filter*
-  realisable rate, which the manifold experiment shows under-reports realisable
-  evasion. So "43% → 0%" describes the free-search realisable gap closing; whether
-  adversarial training closes the larger *manifold* gap is open. Re-running the loop
-  with the manifold-constrained attack is the natural next step.
+  **But that loop measured the free-search + post-filter rate.** Re-running it with the
+  *manifold-constrained* attack tells a sharper, less comfortable story: adversarial
+  training **does not close the realisable gap**. Logistic-regression realisable evasion
+  stays at **100% across all four rounds** (the "43% → 0%" was the post-filter artefact,
+  not robustification); the random forest drops 97% → ~30% after one round but then
+  **plateaus at ~30–40% and drifts back up**, never reaching zero — both at negligible
+  clean cost. Adversarial training against a feasibility-constrained attacker buys
+  *limited, detector-dependent, incomplete* robustness, and only the manifold-constrained
+  measurement reveals it. (`experiments/arms_race.py --manifold`; full account in
+  `docs/manifold_experiment.md`.)
 - **Equilibrium claims (mostly *not* available here).** `docs/game_theory.md` states
   the interaction as a game and checks the preconditions: the strategy spaces are
   infinite and non-convex, the payoffs discontinuous and non-concave, the game
