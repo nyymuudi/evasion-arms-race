@@ -1,0 +1,9 @@
+# Build output (regenerate with: tectonic main.tex). Commit the .tex/.bib/figures,
+# not the compiled PDF. If you want a downloadable preprint in the repo, delete the
+# main.pdf line below.
+main.pdf
+*.aux
+*.log
+*.bbl
+*.blg
+*.out

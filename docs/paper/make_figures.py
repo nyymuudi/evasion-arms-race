@@ -54,8 +54,10 @@ def fig_three_levels():
     for b in (b1, b2):
         ax.bar_label(b, fmt="%.2f", fontsize=8, padding=2)
     ax.set_xticks(x); ax.set_xticklabels(levels, fontsize=9)
-    ax.set_ylabel("evasion success rate"); ax.set_ylim(0, 1.12)
-    ax.legend(loc="upper right", fontsize=9, framealpha=0.9)
+    ax.set_ylabel("evasion success rate"); ax.set_ylim(0, 1.18)
+    # the middle (post-filter) group is the lowest, so a wide legend above it clears
+    # the tall feature-space and manifold bars
+    ax.legend(loc="upper center", ncol=2, fontsize=9, framealpha=0.9)
     ax.grid(axis="y", alpha=0.3)
     ax.set_axisbelow(True)
     _save(fig, "three_levels")
