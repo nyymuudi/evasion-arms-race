@@ -73,7 +73,7 @@ pytest -q                        # the feasibility pipeline should pass out of t
 
 ## Notes on integrity
 
-- Honest evaluation only: PR-AUC over accuracy. The current split is stratified random; a temporal split (to make concept drift visible) requires the timestamped GeneratedLabelledFlows distribution and is deferred, not silently assumed.
+- Honest evaluation only: PR-AUC over accuracy. The temporal split is now done (`docs/temporal_split.md`): on the timestamped GeneratedLabelledFlows distribution, with the IP/Flow-ID metadata dropped and the 12h/day-first timestamps parsed correctly, concept drift is small (LR −0.0031, RF −0.0010 PR-AUC vs stratified) — so the results are not a split artefact. DoS Hulk being a 24-minute burst makes a *global* early/late split degenerate (zero positives in test); the cut is at the attack's median timestamp.
 - The feasibility constraint is the project's reason to exist; relaxing it to chase higher evasion rates would make the results meaningless.
 - Evasion success is reported in **problem space, not just feature space**: a vector counts as an evasion only once it is realisable as traffic. And realisability must shape the **search**, not be applied as a post-filter — a free-space search + filter reported 52% / 0% realisable evasion, but a manifold-constrained search finds 85% / 100%. The project corrected its own headline when this pre-registered test failed (`docs/manifold_experiment.md`); a modest exact result beats an oversold one.
 - Terminology is kept conservative: empirical dynamics are not called equilibria, and a near-perfect PR-AUC is treated as a prompt to investigate (ablation, realisability), not a trophy.
